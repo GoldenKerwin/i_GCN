@@ -38,7 +38,7 @@ class TDrumorGCN(th.nn.Module):
         neighbor_count = neighbor_count.to(device)
         mask_hadamard = mask_hadamard.to(device)
         x1=copy.copy(x.float())
-        x = self.conv1(x, adj,mask_father, neighbor_count, mask_hadamard )
+        x = self.conv1(x, adj, mask_father, neighbor_count, mask_hadamard )
         x2=copy.copy(x)
         rootindex = data.rootindex
         root_extend = th.zeros(len(data.batch), x1.size(1)).to(device)
