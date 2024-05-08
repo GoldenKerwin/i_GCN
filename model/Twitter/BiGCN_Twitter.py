@@ -15,11 +15,13 @@ from BP import Interaction_GraphConvolution as i_GCNConv
 import copy
 
 def edges_to_adjacency_matrix(edge_index):
-    n = max(max(edge_index)) + 1  # 获取节点数量
+    n = th.max(edge_index).item() + 1  # 获取节点数量
     adjacency_matrix = np.zeros((n, n))  # 创建零矩阵
-    for i, j in edge_index:
-        adjacency_matrix[i][j] = 1  # 对于每一条边，更新邻接矩阵
-        adjacency_matrix[j][i] = 1  # 无向图的邻接矩阵是对称的
+    for edge in edge_index:
+        i,j = edge[0].item(),edge[1].item()  # 对于每一条边，更新邻接矩阵
+        adjacency_matrix[i][j] = 1 
+        adjacency_matrix[j][i] = 1 # 无向图的邻接矩阵是对称的
+    adjacency_matrix = th.from_numpy(adjacency_matrix).float()  # 将邻接矩阵转换为tensor
     return adjacency_matrix
 
 class TDrumorGCN(th.nn.Module):
@@ -131,8 +133,8 @@ def train_GCN(treeDic, x_test, x_train,TDdroprate,BUdroprate,lr, weight_decay,pa
     early_stopping = EarlyStopping(patience=patience, verbose=True)
     for epoch in range(n_epochs):
         traindata_list, testdata_list = loadBiData(dataname, treeDic, x_train, x_test, TDdroprate,BUdroprate)
-        train_loader = DataLoader(traindata_list, batch_size=batchsize, shuffle=True, num_workers=5)
-        test_loader = DataLoader(testdata_list, batch_size=batchsize, shuffle=True, num_workers=5)
+        train_loader = DataLoader(traindata_list, batch_size=batchsize, shuffle=True, num_workers=1)
+        test_loader = DataLoader(testdata_list, batch_size=batchsize, shuffle=True, num_workers=1)
         avg_loss = []
         avg_acc = []
         batch_idx = 0
@@ -221,7 +223,8 @@ lr=0.0005
 weight_decay=1e-4
 patience=10
 n_epochs=200
-batchsize=128
+#batchsize=128
+batchsize=64
 TDdroprate=0.2
 BUdroprate=0.2
 datasetname=sys.argv[1] #"Twitter15"、"Twitter16"
