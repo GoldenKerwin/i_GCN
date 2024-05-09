@@ -31,17 +31,20 @@ class TDrumorGCN(th.nn.Module):
         self.conv2 = GCNConv(hid_feats+in_feats, out_feats)
 
     def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+        x, edge_index = data.x.to(device), data.edge_index.to(device)
         adj = edges_to_adjacency_matrix(x,edge_index)
         mask_father, neighbor_count, mask_hadamard = self.conv1.caculation(adj)
+        mask_father = mask_father.to(device)
+        neighbor_count = neighbor_count.to(device)
+        mask_hadamard = mask_hadamard.to(device)
         x1=copy.copy(x.float())
         x = self.conv1(x, adj, mask_father, neighbor_count, mask_hadamard )
         x2=copy.copy(x)
         rootindex = data.rootindex
-        root_extend = th.zeros(len(data.batch), x1.size(1))
+        root_extend = th.zeros(len(data.batch), x1.size(1)).to(device)
         batch_size = max(data.batch) + 1
         for num_batch in range(batch_size):
-            index = (th.eq(data.batch, num_batch))
+            index = (th.eq(data.batch.to(device), num_batch))
             root_extend[index] = x1[rootindex[num_batch]]
         x = th.cat((x,root_extend), 1)
 
@@ -49,9 +52,9 @@ class TDrumorGCN(th.nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        root_extend = th.zeros(len(data.batch), x2.size(1))
+        root_extend = th.zeros(len(data.batch), x2.size(1)).to(device)
         for num_batch in range(batch_size):
-            index = (th.eq(data.batch, num_batch))
+            index = (th.eq(data.batch.to(device), num_batch))
             root_extend[index] = x2[rootindex[num_batch]]
         x = th.cat((x,root_extend), 1)
         x= scatter_mean(x, data.batch, dim=0)
@@ -65,18 +68,21 @@ class BUrumorGCN(th.nn.Module):
         self.conv2 = GCNConv(hid_feats+in_feats, out_feats)
 
     def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+        x, edge_index = data.x.to(device), data.edge_index.to(device)
         adj = edges_to_adjacency_matrix(x,edge_index)
         mask_father, neighbor_count, mask_hadamard = self.conv1.caculation(adj)
+        mask_father = mask_father.to(device)
+        neighbor_count = neighbor_count.to(device)
+        mask_hadamard = mask_hadamard.to(device)
         x1=copy.copy(x.float())
         x = self.conv1(x, adj ,mask_father, neighbor_count, mask_hadamard )
         x2 = copy.copy(x)
 
         rootindex = data.rootindex
-        root_extend = th.zeros(len(data.batch), x1.size(1))
+        root_extend = th.zeros(len(data.batch), x1.size(1)).to(device)
         batch_size = max(data.batch) + 1
         for num_batch in range(batch_size):
-            index = (th.eq(data.batch, num_batch))
+            index = (th.eq(data.batch.to(device), num_batch))
             root_extend[index] = x1[rootindex[num_batch]]
         x = th.cat((x,root_extend), 1)
 
@@ -84,9 +90,9 @@ class BUrumorGCN(th.nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        root_extend = th.zeros(len(data.batch), x2.size(1))
+        root_extend = th.zeros(len(data.batch), x2.size(1)).to(device)
         for num_batch in range(batch_size):
-            index = (th.eq(data.batch, num_batch))
+            index = (th.eq(data.batch.to(device), num_batch))
             root_extend[index] = x2[rootindex[num_batch]]
         x = th.cat((x,root_extend), 1)
 
@@ -218,7 +224,7 @@ weight_decay=1e-4
 patience=10
 n_epochs=200
 #batchsize=128
-batchsize=64
+batchsize=32
 TDdroprate=0.2
 BUdroprate=0.2
 datasetname=sys.argv[1] #"Twitter15"、"Twitter16"

@@ -12,8 +12,7 @@ class Interaction_GraphConvolution(nn.Module):
         self.out_features = out_features
         self.weight = Parameter(torch.FloatTensor(in_features, out_features))
         self.reset_parameters()
-        # self.linear = torch.nn.Linear(, in_features)
-
+        
     def reset_parameters(self):
         nn.init.kaiming_uniform_(self.weight)
 
@@ -39,9 +38,10 @@ class Interaction_GraphConvolution(nn.Module):
 
 
     def forward(self, node_features, adjacency_matrix, mask_father, neighbor_count, mask_hadamard):
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         node_features = node_features.float()  # 将node_features移动到指定设备
         input_features = node_features.shape[1]
-        linear = torch.nn.Linear(input_features, self.in_features)  # 将linear移动到指定设备
+        linear = torch.nn.Linear(input_features, self.in_features).to(device)  # 将linear移动到指定设备
         node_features = linear(node_features)
 
         weight_features = torch.mm(node_features, self.weight)  # 将self.weight移动到指定设备
@@ -56,13 +56,12 @@ class Interaction_GraphConvolution(nn.Module):
 
         adjacency_matrix = adjacency_matrix.unsqueeze(0)
         masked_hadamard = masked_hadamard.transpose(0, 1).transpose(0, 2)
-        same_father_nodes = torch.matmul(adjacency_matrix, masked_hadamard)  
-
+        same_father_nodes = torch.matmul(adjacency_matrix.to(device), masked_hadamard.to(device))  
         same_father_nodes = same_father_nodes.transpose(0, 2).transpose(0, 1)
-        same_father_nodes = same_father_nodes * mask_father  
+        same_father_nodes *= mask_father
         
         sum_hadamard = same_father_nodes.sum(dim=2)
-        out_features = sum_hadamard / pow(neighbor_count.to(device), 2)  
+        out_features = sum_hadamard / pow(neighbor_count, 2)  
         torch.cuda.empty_cache()
         return out_features
 
