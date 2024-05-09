@@ -14,8 +14,8 @@ from torch_geometric.nn import GCNConv
 from BP import Interaction_GraphConvolution as i_GCNConv
 import copy
 
-def edges_to_adjacency_matrix(edge_index):
-    n = th.max(edge_index).item() + 1  # 获取节点数量
+def edges_to_adjacency_matrix(x,edge_index):
+    n = x.shape[0]  # 获取节点数量
     adjacency_matrix = np.zeros((n, n))  # 创建零矩阵
     for edge in edge_index:
         i,j = edge[0].item(),edge[1].item()  # 对于每一条边，更新邻接矩阵
@@ -32,16 +32,13 @@ class TDrumorGCN(th.nn.Module):
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
-        adj = edges_to_adjacency_matrix(edge_index).to(device)
-        mask_father, neighbor_count, mask_hadamard = self.conv1.caculation(x, adj)
-        mask_father = mask_father.to(device)
-        neighbor_count = neighbor_count.to(device)
-        mask_hadamard = mask_hadamard.to(device)
+        adj = edges_to_adjacency_matrix(x,edge_index)
+        mask_father, neighbor_count, mask_hadamard = self.conv1.caculation(adj)
         x1=copy.copy(x.float())
         x = self.conv1(x, adj, mask_father, neighbor_count, mask_hadamard )
         x2=copy.copy(x)
         rootindex = data.rootindex
-        root_extend = th.zeros(len(data.batch), x1.size(1)).to(device)
+        root_extend = th.zeros(len(data.batch), x1.size(1))
         batch_size = max(data.batch) + 1
         for num_batch in range(batch_size):
             index = (th.eq(data.batch, num_batch))
@@ -52,7 +49,7 @@ class TDrumorGCN(th.nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        root_extend = th.zeros(len(data.batch), x2.size(1)).to(device)
+        root_extend = th.zeros(len(data.batch), x2.size(1))
         for num_batch in range(batch_size):
             index = (th.eq(data.batch, num_batch))
             root_extend[index] = x2[rootindex[num_batch]]
@@ -69,17 +66,14 @@ class BUrumorGCN(th.nn.Module):
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
-        adj = edges_to_adjacency_matrix(edge_index).to(device)
-        mask_father, neighbor_count, mask_hadamard = self.conv1.caculation(x, adj)
-        mask_father = mask_father.to(device)
-        neighbor_count = neighbor_count.to(device)
-        mask_hadamard = mask_hadamard.to(device)
+        adj = edges_to_adjacency_matrix(x,edge_index)
+        mask_father, neighbor_count, mask_hadamard = self.conv1.caculation(adj)
         x1=copy.copy(x.float())
-        x = self.conv1(x, edge_index,mask_father, neighbor_count, mask_hadamard )
+        x = self.conv1(x, adj ,mask_father, neighbor_count, mask_hadamard )
         x2 = copy.copy(x)
 
         rootindex = data.rootindex
-        root_extend = th.zeros(len(data.batch), x1.size(1)).to(device)
+        root_extend = th.zeros(len(data.batch), x1.size(1))
         batch_size = max(data.batch) + 1
         for num_batch in range(batch_size):
             index = (th.eq(data.batch, num_batch))
@@ -90,7 +84,7 @@ class BUrumorGCN(th.nn.Module):
         x = F.dropout(x, training=self.training)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        root_extend = th.zeros(len(data.batch), x2.size(1)).to(device)
+        root_extend = th.zeros(len(data.batch), x2.size(1))
         for num_batch in range(batch_size):
             index = (th.eq(data.batch, num_batch))
             root_extend[index] = x2[rootindex[num_batch]]
@@ -133,8 +127,8 @@ def train_GCN(treeDic, x_test, x_train,TDdroprate,BUdroprate,lr, weight_decay,pa
     early_stopping = EarlyStopping(patience=patience, verbose=True)
     for epoch in range(n_epochs):
         traindata_list, testdata_list = loadBiData(dataname, treeDic, x_train, x_test, TDdroprate,BUdroprate)
-        train_loader = DataLoader(traindata_list, batch_size=batchsize, shuffle=True, num_workers=1)
-        test_loader = DataLoader(testdata_list, batch_size=batchsize, shuffle=True, num_workers=1)
+        train_loader = DataLoader(traindata_list, batch_size=batchsize, shuffle=True, num_workers=4)
+        test_loader = DataLoader(testdata_list, batch_size=batchsize, shuffle=True, num_workers=4)
         avg_loss = []
         avg_acc = []
         batch_idx = 0
